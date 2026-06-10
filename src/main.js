@@ -71,8 +71,8 @@ const particles = new Particles(scene, atlasCanvas)
 const ambience = new Ambience()
 const birds = new Birds(scene)
 player.onModeChange = (mode) => {
-  ui.showMode(mode === 'gliding' ? 'Gliding' : 'Walking')
-  if (mode === 'walking') ui.showHint('Double-tap Space to take off again')
+  ui.showMode(mode === 'gliding' ? ui.t.gliding : ui.t.walking)
+  if (mode === 'walking') ui.showHint(ui.t.hintTakeoff)
 }
 
 // targeted-block outline
@@ -95,8 +95,8 @@ document.addEventListener('pointerlockchange', () => {
   ambience.setPaused(!locked)
   if (locked && player.frozen) {
     player.frozen = false
-    ui.showMode('Gliding')
-    ui.showHint('Pitch down to dive · pitch up to soar')
+    ui.showMode(ui.t.gliding)
+    ui.showHint(ui.t.hintGlide)
   }
 })
 document.addEventListener('mousemove', (e) => {
