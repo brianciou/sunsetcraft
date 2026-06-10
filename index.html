@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sunsetcraft</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    html, body { width: 100%; height: 100%; overflow: hidden; background: #1a1430; }
+    body { font-family: "Avenir Next", "Segoe UI", system-ui, sans-serif; user-select: none; }
+    canvas { display: block; }
+
+    #overlay {
+      position: fixed; inset: 0; z-index: 20;
+      display: flex; flex-direction: column; align-items: center; justify-content: center;
+      background: radial-gradient(ellipse at center, rgba(20, 12, 40, 0.18) 0%, rgba(16, 8, 34, 0.66) 100%);
+      cursor: pointer; transition: opacity 0.6s ease;
+    }
+    #overlay.hidden { opacity: 0; pointer-events: none; }
+    #overlay h1 {
+      font-size: clamp(48px, 9vw, 110px);
+      font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase;
+      background: linear-gradient(180deg, #ffe9b0 0%, #ffb347 38%, #ff7e5f 64%, #c86dd7 100%);
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+      filter: drop-shadow(0 4px 26px rgba(255, 140, 60, 0.45));
+    }
+    #overlay .sub {
+      margin-top: 10px; color: #ffd9a8; opacity: 0.85;
+      font-size: 15px; letter-spacing: 0.42em; text-transform: uppercase;
+    }
+    #overlay .start {
+      margin-top: 56px; color: #fff; font-size: 18px; letter-spacing: 0.2em;
+      padding: 14px 38px; border: 1px solid rgba(255, 200, 140, 0.55); border-radius: 999px;
+      background: rgba(255, 130, 50, 0.12); backdrop-filter: blur(4px);
+      animation: pulse 2.4s ease-in-out infinite;
+    }
+    @keyframes pulse { 0%,100% { box-shadow: 0 0 0 0 rgba(255,160,80,0.35); } 50% { box-shadow: 0 0 30px 4px rgba(255,160,80,0.25); } }
+    #overlay .keys {
+      position: absolute; bottom: 34px; color: rgba(255, 225, 190, 0.75);
+      font-size: 13px; letter-spacing: 0.08em; line-height: 1.9; text-align: center;
+    }
+    #overlay .keys b { color: #ffd9a8; font-weight: 600; }
+
+    #hud { position: fixed; inset: 0; z-index: 10; pointer-events: none; opacity: 0; transition: opacity 0.5s; }
+    #hud.visible { opacity: 1; }
+
+    #crosshair {
+      position: absolute; left: 50%; top: 50%; width: 18px; height: 18px;
+      transform: translate(-50%, -50%); opacity: 0.85;
+    }
+    #crosshair::before, #crosshair::after {
+      content: ""; position: absolute; background: rgba(255,255,255,0.9);
+      mix-blend-mode: difference;
+    }
+    #crosshair::before { left: 8px; top: 0; width: 2px; height: 18px; }
+    #crosshair::after { left: 0; top: 8px; width: 18px; height: 2px; }
+
+    #hotbar {
+      position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%);
+      display: flex; gap: 6px; padding: 7px;
+      background: rgba(12, 8, 28, 0.55); border: 1px solid rgba(255, 190, 120, 0.25);
+      border-radius: 12px; backdrop-filter: blur(6px);
+    }
+    .slot {
+      width: 54px; height: 54px; border-radius: 8px; position: relative;
+      background: rgba(255, 235, 210, 0.06); border: 2px solid rgba(255, 220, 170, 0.16);
+      display: flex; align-items: center; justify-content: center;
+      transition: border-color 0.12s, transform 0.12s, background 0.12s;
+    }
+    .slot.selected {
+      border-color: #ffc87a; background: rgba(255, 180, 90, 0.16);
+      transform: translateY(-4px);
+      box-shadow: 0 0 18px rgba(255, 170, 80, 0.35);
+    }
+    .slot canvas { width: 42px; height: 42px; image-rendering: pixelated; }
+    .slot .num {
+      position: absolute; top: 2px; left: 5px; font-size: 10px;
+      color: rgba(255, 230, 200, 0.6);
+    }
+    .slot .name {
+      position: absolute; bottom: -22px; left: 50%; transform: translateX(-50%);
+      font-size: 10px; color: rgba(255,230,200,0.0); white-space: nowrap; transition: color 0.15s;
+    }
+    .slot.selected .name { color: rgba(255,230,200,0.85); }
+
+    #mode {
+      position: absolute; top: 22px; left: 50%; transform: translateX(-50%);
+      color: rgba(255, 220, 180, 0.85); font-size: 12px; letter-spacing: 0.34em;
+      text-transform: uppercase; text-shadow: 0 1px 8px rgba(0,0,0,0.5);
+      transition: opacity 0.4s; opacity: 0;
+    }
+    #mode.show { opacity: 1; }
+
+    #hint {
+      position: absolute; bottom: 110px; left: 50%; transform: translateX(-50%);
+      color: rgba(255, 235, 205, 0.9); font-size: 14px; letter-spacing: 0.12em;
+      text-shadow: 0 1px 10px rgba(0,0,0,0.6); transition: opacity 0.8s; text-align: center;
+    }
+    #hint.fade { opacity: 0; }
+
+    #water-tint {
+      position: fixed; inset: 0; z-index: 5; pointer-events: none;
+      background: linear-gradient(180deg, rgba(20, 50, 90, 0.42), rgba(8, 24, 56, 0.6));
+      opacity: 0; transition: opacity 0.25s;
+    }
+  </style>
+</head>
+<body>
+  <div id="water-tint"></div>
+  <div id="hud">
+    <div id="crosshair"></div>
+    <div id="mode">Gliding</div>
+    <div id="hint"></div>
+    <div id="hotbar"></div>
+  </div>
+  <div id="overlay">
+    <h1>Sunsetcraft</h1>
+    <div class="sub">the eternal sunset</div>
+    <div class="start">Click to take flight</div>
+    <div class="keys">
+      <b>WASD</b> move &nbsp;·&nbsp; <b>Mouse</b> look &nbsp;·&nbsp; <b>Space</b> jump / swim &nbsp;·&nbsp; <b>Space ×2</b> take off &amp; glide<br/>
+      <b>Left click</b> break &nbsp;·&nbsp; <b>Right click</b> place &nbsp;·&nbsp; <b>1–8 / wheel</b> select block &nbsp;·&nbsp; <b>Shift</b> sprint
+    </div>
+  </div>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
